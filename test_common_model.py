@@ -2,15 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 dt = 0.5
-duration = 200
+duration = 2000
 
-Iext = np.asarray([1.5, 2.5])
-tau_nu = 2
+Iext = np.asarray([5.5, 0.0])
+tau_nu = np.asarray([20.0, 10.0])
 tau_a = 10
-k = 2.2
-k2 = 2.5
-k3 = 0.01
-r = 0.01
+k = 1.0
+k2 = 1.0
+k3 = 1 # 0.01
+r = 0.1
 
 Nsteps = int(duration / dt)
 Npops = 2
@@ -29,8 +29,8 @@ a = np.zeros_like(nu)
 exp_tau_nu = np.exp(-dt/tau_nu)
 exp_tau_a = np.exp(-dt/tau_a)
 
-gmax = 10 * np.asarray([ [1.0, 10.1], [-50.0, 0.0] ])
-pconn = np.asarray([ [1.0, 1.0], [1.0, 1.0] ])
+gmax = np.asarray([ [5.0, 2.1], [-7.0, -2.0] ])
+pconn = 0.01*np.asarray([ [1.0, 1.0], [1.0, 1.0] ])
 tau_d = np.asarray([ [750.0, 750.0], [750.0, 750.0] ])
 tau_r = np.asarray([ [20.0, 20.0], [20.0, 20.0] ])
 tau_f = np.asarray([ [50.0, 50.0], [50.0, 50.0] ])
@@ -51,7 +51,8 @@ for i in range(Nsteps - 1):
     ## nu[i + 1] = nu[i] + dt * (-nu[i] + (k3 - r*nu[i]) * I_F_cuve(Iext) - k2*a[i]) / tau_nu    # np.exp(-dt / )
     ## a[i + 1] = a[i] + dt * (-a[i] + k * nu[i]) / tau_a
 
-    nu_inf = (k3 - r*nu[i, :]) * I_F_cuve(Isyn + Iext) - k2*a[i, :]
+    nu_inf = (k3 - r*nu[i, :]) * I_F_cuve(Isyn + Iext - k2*a[i, :])
+
     a_inf = k * nu[i, :]
     nu[i + 1, :] = nu_inf - (nu_inf - nu[i, :]) * exp_tau_nu
     a[i + 1, :] = a_inf - (a_inf - a[i, :]) * exp_tau_a
