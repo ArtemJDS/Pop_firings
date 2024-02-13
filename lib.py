@@ -32,8 +32,7 @@ class RateModel:
         y = np.where(x > self.th, self.MaxFR * shx_2 / (self.Sfr + shx_2), 0)
         return y
 
-    def run_model(self, dt, duration, gexc, ginh):
-        Nsteps = int(duration / dt)
+    def run_model(self, dt, Nsteps, gexc, ginh):
         Npops = self.tau_A.size
 
         FR = np.zeros([Nsteps, Npops], dtype=np.float64)
@@ -52,4 +51,26 @@ class RateModel:
             Ad[i + 1, :] = A_inf - (A_inf - Ad[i, :]) * exp_tau_A
 
 
+
         return FR
+
+    def loss(self, X, dt, FRtar, gexc, ginh):
+        self.MaxFR[0] = X[0]
+        self.Sfr[0] = X[1]
+        self.th[0] = X[2]
+
+        self.r[0] = X[3]
+        self.q[0] = X[4]
+        self.s[0] = X[5]
+
+        self.tau_FR[0] = X[6]
+        self.tau_A[0] = X[7]
+        self.winh[0] = X[8]
+
+        Nsteps = FRtar.size
+
+        FRsim = self.run_model(dt, Nsteps, gexc, ginh)
+
+        L = np.mean( (FRsim-FRtar)**2 )
+
+        return L
