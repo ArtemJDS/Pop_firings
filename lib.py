@@ -57,7 +57,7 @@ class RateModel:
 
         return FR
 
-    def loss(self, X, dt, FRtar, gexc, ginh):
+    def run_from_X(self, X, dt, Nsteps, gexc, ginh):
         self.MaxFR[0] = X[0]
         self.Sfr[0] = X[1]
         self.th[0] = X[2]
@@ -70,10 +70,14 @@ class RateModel:
         self.tau_A[0] = X[7]
         self.winh[0] = X[8]
 
-        Nsteps = FRtar.shape[0]
+
 
         FRsim = self.run_model(dt, Nsteps, gexc, ginh)
+        return FRsim
 
+    def loss(self, X, dt, FRtar, gexc, ginh):
+        Nsteps = FRtar.shape[0]
+        FRsim = self.run_from_X(X, dt, Nsteps, gexc, ginh)
         L = np.sum( np.log( (FRsim+1.0)/(FRtar+1) )**2 )
 
         return L

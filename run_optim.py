@@ -6,6 +6,9 @@ from collections import OrderedDict
 import json
 import lib
 
+
+IS_OPTIM = False
+
 dt = 0.1
 duration = 2000
 
@@ -25,7 +28,7 @@ parameters = [parordict,]
 bounds = [
     [0.2, 1.0], # "MaxFR"
     [100, 10000], # "Sfr"
-    [0, 100], # "th"
+    [-100, 100], # "th"
     [0.0001, 1.0], # "r"
     [0.0001, 1.0], # "q"
     [0.0001, 1.0], # "s"
@@ -59,18 +62,54 @@ for idx, val in enumerate(parordict.values()):
 
 
 pop = lib.RateModel(Niter, parameters)
-res = differential_evolution(pop.loss, x0=X, bounds=bounds, args=(dt, target_firing_rate, gexc, ginh), \
-                                atol=1e-3, recombination=0.7, mutation=0.2, updating='deferred', strategy='best2bin', \
-                                disp=True, workers=-1, maxiter=1000)
-print(res.message)
-print(res.x)
 
-for idx, key in enumerate(parordict.keys()):
-    parordict[key] = res.x[idx]
+if IS_OPTIM:
+    res = differential_evolution(pop.loss, x0=X, bounds=bounds, args=(dt, target_firing_rate, gexc, ginh), \
+                                    atol=1e-3, recombination=0.7, mutation=0.9, updating='deferred', strategy='best2bin', \
+                                    disp=True, workers=-1, maxiter=1000)
+    print(res.message)
+    print(res.x)
 
 
-with open("optim_res.json", "w") as outfile:
-    json.dump(parordict, outfile)
+
+    for idx, key in enumerate(parordict.keys()):
+        parordict[key] = res.x[idx]
+
+
+    with open("optim_res.json", "w") as outfile:
+        json.dump(parordict, outfile)
+
+else:
+    with open("optim_res.json", "r") as outfile:
+        params = json.load(outfile)
+
+        for idx, key in enumerate(parordict.keys()):
+            X[idx] = params[key]
+
+
+
+rate_model_firings = pop.run_from_X(X, dt, target_firing_rate.shape[0], gexc, ginh)
+
+t = np.linspace(0, duration, target_firing_rate.shape[0])
+for idx in range(target_firing_rate.shape[1]):
+    fig, axes = plt.subplots(nrows=2)
+
+    axes[0].set_title(idx)
+    axes[0].plot(t, rate_model_firings[:, idx], label="Rate model", color="green")
+    axes[0].plot(t, target_firing_rate[:, idx], label="Izhikevich model", color="red")
+
+    axes[0].legend(loc="upper right")
+
+    axes[1].plot(t[1:], gexc[:, idx], label="Ext conductance", color="orange")
+    axes[1].plot(t[1:], ginh[:, idx], label="Inh conductance", color="blue")
+
+    axes[1].legend(loc="upper right")
+
+    plt.show(block=True)
+
+    if idx > 20:
+        break
+
 
 # optimal_params = parordict
 # file = open("res.txt", "w")
