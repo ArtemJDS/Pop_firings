@@ -2,22 +2,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution
 import h5py
+from collections import OrderedDict
+import json
 import lib
 
 dt = 0.1
-duration = 200
+duration = 2000
 
-params = [{
-    "MaxFR" : 0.9,
-    "Sfr" : 625,
-    "th" : 0.5,
-    "r" : 0.1,
-    "q" : 0.9,
-    "s" : 0.9,
-    "tau_FR" : 10,
-    "tau_A" : 100,
-    "winh" : 5,
-},]
+parordict = OrderedDict()
+parordict["MaxFR"] = 0.9
+parordict["Sfr"] = 625
+parordict["th"] = 0.5
+parordict["r"] = 0.1
+parordict["q"] = 0.9
+parordict["s"] = 0.9
+parordict["tau_FR"] = 10
+parordict["tau_A"] = 100
+parordict["winh"] = 5
+
+parameters = [parordict,]
 
 bounds = [
     [0.2, 1.0], # "MaxFR"
@@ -30,21 +33,53 @@ bounds = [
     [0.1, 1000.0], # "tau_A"
     [0.1, 100.0], # "winh"
 ]
+Niter = 100
+path = "./pv_firing_rate"
 
-with h5py.File("data.hdf5", mode='r') as h5file:
-    gexc = h5file["gexc"][:].ravel()
-    ginh = h5file["ginh"][:].ravel()
-    target_firing_rate = h5file["firing_rate"][:].ravel()
+target_firing_rate = []
+gexc = []
+ginh = []
+
+for idx in range(Niter):
+    filepath = "{path}/{i}.hdf5".format(path=path, i=idx)
+    with h5py.File(filepath, mode='r') as h5file:
+        gexc.append( h5file["gexc"][:].ravel() )
+        ginh.append( h5file["ginh"][:].ravel() )
+        target_firing_rate.append(h5file["firing_rate"][:].ravel())
 
 
-pop = lib.RateModel(params)
-res = differential_evolution(pop.loss, bounds, args=(dt, target_firing_rate, gexc, ginh), \
-                             disp=True, maxiter=10)
+target_firing_rate = np.stack(target_firing_rate, axis=1)
+gexc = np.stack(gexc, axis=1)
+ginh = np.stack(ginh, axis=1)
 
+
+X = np.zeros(9, dtype=np.float64)
+for idx, val in enumerate(parordict.values()):
+    X[idx] = val
+
+
+pop = lib.RateModel(Niter, parameters)
+res = differential_evolution(pop.loss, x0=X, bounds=bounds, args=(dt, target_firing_rate, gexc, ginh), \
+                                atol=1e-3, recombination=0.7, mutation=0.2, updating='deferred', strategy='best2bin', \
+                                disp=True, workers=-1, maxiter=1000)
+print(res.message)
 print(res.x)
+
+for idx, key in enumerate(parordict.keys()):
+    parordict[key] = res.x[idx]
+
+
+with open("optim_res.json", "w") as outfile:
+    json.dump(parordict, outfile)
+
+# optimal_params = parordict
+# file = open("res.txt", "w")
+# for key, val in optimal_params.items():
+#     file.write("{} : {}\n".format(key, val))
+# file.close()
 
 # gexc = 1 + np.cos(2*np.pi*0.008*np.linspace(0, duration, int(duration/dt)+1))
 # ginh = 1 + np.cos(2*np.pi*0.008*np.linspace(0, duration, int(duration/dt)+1) + np.pi )
 # fr = pop.run_model(dt, duration, gexc, ginh)
-# plt.plot(fr)
+# plt.plot(target_firing_rate[:, 55])
 # plt.show()

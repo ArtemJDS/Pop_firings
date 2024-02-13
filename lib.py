@@ -3,16 +3,18 @@ import numpy as np
 
 class RateModel:
 
-    def __init__(self, params):
-        self.MaxFR = np.zeros(len(params), dtype=np.float64)
-        self.Sfr = np.zeros(len(params), dtype=np.float64)
-        self.th = np.zeros(len(params), dtype=np.float64)
-        self.r = np.zeros(len(params), dtype=np.float64)
-        self.s = np.zeros(len(params), dtype=np.float64)
-        self.q = np.zeros(len(params), dtype=np.float64)
-        self.tau_FR = np.zeros(len(params), dtype=np.float64)
-        self.tau_A = np.zeros(len(params), dtype=np.float64)
-        self.winh = np.zeros(len(params), dtype=np.float64)
+    def __init__(self, Npops, params):
+        self.Npops = Npops
+
+        self.MaxFR = np.zeros(1, dtype=np.float64)
+        self.Sfr = np.zeros(1, dtype=np.float64)
+        self.th = np.zeros(1, dtype=np.float64)
+        self.r = np.zeros(1, dtype=np.float64)
+        self.s = np.zeros(1, dtype=np.float64)
+        self.q = np.zeros(1, dtype=np.float64)
+        self.tau_FR = np.zeros(1, dtype=np.float64)
+        self.tau_A = np.zeros(1, dtype=np.float64)
+        self.winh = np.zeros(1, dtype=np.float64)
 
         for idx, p in enumerate(params):
             self.MaxFR[idx] = p["MaxFR"]
@@ -27,15 +29,16 @@ class RateModel:
             self.tau_A[idx] = p["tau_A"]
             self.winh[idx] = p["winh"]
 
+            break
+
     def I_F_cuve(self, x):
         shx_2 = (x - self.th)**2
         y = np.where(x > self.th, self.MaxFR * shx_2 / (self.Sfr + shx_2), 0)
         return y
 
     def run_model(self, dt, Nsteps, gexc, ginh):
-        Npops = self.tau_A.size
 
-        FR = np.zeros([Nsteps, Npops], dtype=np.float64)
+        FR = np.zeros([Nsteps, self.Npops], dtype=np.float64)
 
         Ad = np.zeros_like(FR)
 
@@ -43,7 +46,7 @@ class RateModel:
         exp_tau_A = np.exp(-dt / self.tau_A)
 
         for i in range(Nsteps - 1):
-            FR_inf = (1 - self.r * FR[i, :]) * self.I_F_cuve(gexc[i] - self.winh * ginh[i] - self.q * Ad[i, :])
+            FR_inf = (1 - self.r * FR[i, :]) * self.I_F_cuve(gexc[i, :] - self.winh * ginh[i, :] - self.q * Ad[i, :])
             A_inf = self.s * FR[i, :]
 
 
@@ -67,10 +70,10 @@ class RateModel:
         self.tau_A[0] = X[7]
         self.winh[0] = X[8]
 
-        Nsteps = FRtar.size
+        Nsteps = FRtar.shape[0]
 
         FRsim = self.run_model(dt, Nsteps, gexc, ginh)
 
-        L = np.mean( (FRsim-FRtar)**2 )
+        L = np.sum( np.log( (FRsim+1.0)/(FRtar+1) )**2 )
 
         return L
