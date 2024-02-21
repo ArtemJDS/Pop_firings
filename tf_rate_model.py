@@ -2,9 +2,10 @@ import numpy as np
 import tensorflow as tf
 import keras
 from keras import layers
-#from keras.layers import Layer, Activation, Input, AbstractRNNCell
+import matplotlib.pyplot as plt
 from keras import backend as K
 import json
+import h5py
 class RateModel(layers.Layer):
 
     def __init__(self, params, dt=0.1, **kwargs):
@@ -55,16 +56,13 @@ class RateModel(layers.Layer):
         self.built = True
 
     def I_F_cuve(self, x):
+        # shx_2 = (x - self.th)**2
+        #
+        # y = tf.nn.relu(x - self.th) * self.MaxFR * (x - self.th) / (self.Sfr + shx_2)
         shx_2 = (x - self.th)**2
-
-        y = tf.nn.relu(x - self.th) * self.MaxFR * (x - self.th) / (self.Sfr + shx_2)
-        # y = tf.where(x > self.th, self.MaxFR * shx_2 / (self.Sfr + shx_2), 0)
+        y = tf.where(x > self.th, self.MaxFR * shx_2 / (self.Sfr + shx_2), 0)
         return y
     def call(self, inputs, states):
-        # prev_output = states[0]
-        # h = K.dot(inputs, self.kernel)
-        # output = h + K.dot(prev_output, self.recurrent_kernel)
-
         FR = states[0]
         Ad = states[1]
 
@@ -74,19 +72,21 @@ class RateModel(layers.Layer):
 
         #print(self.pconn, FR)
 
-        FRpre_normed =  K.dot(FR, self.pconn)  #tf.concat(FR, inputs)
+        # FRpre_normed =  K.dot(FR, self.pconn)  #tf.concat(FR, inputs)
+        #
+        #
+        # y_ = R * K.exp(-self.dt / self.tau_d)
+        #
+        # x_ = 1 + (X - 1 + self.tau1r * U) * K.exp(-self.dt / self.tau_r) - self.tau1r * U
+        #
+        # u_ = U * K.exp(-self.dt / self.tau_f)
+        # U = u_ + self.Uinc * (1 - u_) * FRpre_normed
+        # R = y_ + U * x_ * FRpre_normed
+        # X = x_ - U * x_ * FRpre_normed
+        #
+        # Isyn = K.sum(self.gsyn_max * X, axis=1)
 
-
-        y_ = R * K.exp(-self.dt / self.tau_d)
-
-        x_ = 1 + (X - 1 + self.tau1r * U) * K.exp(-self.dt / self.tau_r) - self.tau1r * U
-
-        u_ = U * K.exp(-self.dt / self.tau_f)
-        U = u_ + self.Uinc * (1 - u_) * FRpre_normed
-        R = y_ + U * x_ * FRpre_normed
-        X = x_ - U * x_ * FRpre_normed
-
-        Isyn = K.sum(self.gsyn_max * X, axis=1)
+        Isyn = K.sum(inputs)
 
 
         FR_inf = (1 - self.r * FR) * self.I_F_cuve(Isyn - self.q * Ad)
@@ -119,7 +119,6 @@ for idx in range(5):
     else:
         initial_state.append(np.zeros((1, Nunits, Nunits), dtype=np.float32))
 
-    print(initial_state[-1].shape)
 
 rate_model = layers.RNN( RateModel(params, dt=0.1), return_sequences=True, stateful=True )
 
@@ -128,11 +127,37 @@ model.add( rate_model )
 
 model.build( input_shape=input_shape)
 
-X = np.zeros((1, 2, Nunits), dtype=np.float32)
-print(X)
+# X = np.zeros((1, 2, Nunits), dtype=np.float32)
+# print(X)
+
+with h5py.File("test.hdf5", "r") as h5file:
+    rate_model_firings = h5file["rate_model_firings"][:]
+    gexc = h5file["gexc"][:]
+    ginh = h5file["ginh"][:]
+
+    ginh = ginh * -params["winh"][0]
+
+X = np.stack( [gexc[:, 0], ginh[:, 0]], axis=1)
+X = np.reshape(X, (1, -1, 2))
 
 model.layers[0].reset_states(states=initial_state)
 Y = model.predict(X)
 
-print(Y)
+duration = 2000
+
+Y = np.asarray(Y)
+
+print(Y.shape)
+
+t = np.linspace(0, duration, rate_model_firings.shape[0]-1)
+fig, axes = plt.subplots(nrows=2)
+
+axes[0].plot(t, rate_model_firings[:-1, 0], label="Rate model", color="green", linewidth=3)
+axes[0].plot(t, Y[0, :, 0], label="TF model", color="red", linewidth=1)
+
+axes[1].plot(t, X[0, :, :])
+# axes[1].plot(t, gexc[:, 0])
+# axes[1].plot(t, ginh[:, 0])
+
+plt.show()
 #model.summary()
