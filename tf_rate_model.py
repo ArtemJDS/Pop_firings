@@ -22,19 +22,26 @@ class RateModel(layers.Layer):
         self.tau_A = tf.convert_to_tensor( params['tau_A'] )
         self.winh = tf.convert_to_tensor( params['winh'] )
 
-        # self.tau_f = tf.convert_to_tensor( kwargs['tau_f'] )
-        # self.tau_d = tf.convert_to_tensor( kwargs['tau_f'] )
-        # self.tau_r = tf.convert_to_tensor( kwargs['tau_r'] )
-        # self.Uinc  = tf.convert_to_tensor( kwargs['Uinc'] )
-        # self.gsyn_max = tf.convert_to_tensor( kwargs['gsyn_max'] )
-        # self.pconn = tf.convert_to_tensor( kwargs['pconn'] )
-
-        self.units = tf.size(self.MaxFR)
-        self.state_size = [self.units, self.units]
-        # #self.ninp = tf.shape(self.gsyn_max)[0] - self.units
-        #
         self.exp_tau_FR = K.exp(-self.dt / self.tau_FR)
         self.exp_tau_A = K.exp(-self.dt / self.tau_A)
+
+
+        self.gsyn_max = tf.convert_to_tensor( params['gsyn_max'] )
+        self.tau_f = tf.convert_to_tensor( params['tau_f'] )
+        self.tau_d = tf.convert_to_tensor( params['tau_f'] )
+        self.tau_r = tf.convert_to_tensor( params['tau_r'] )
+        self.Uinc  = tf.convert_to_tensor( params['Uinc'] )
+        self.pconn = tf.convert_to_tensor( params['pconn'] )
+
+        self.tau1r = tf.where(self.tau_d != self.tau_r, self.tau_d / (self.tau_d - self.tau_r), 1e-13)
+
+        self.units = tf.size(self.MaxFR)
+
+        self.state_size = [tf.TensorShape([self.units]), tf.TensorShape([self.units]), tf.TensorShape([self.units, self.units]), tf.TensorShape([self.units, self.units]), tf.TensorShape([self.units, self.units])]
+        self.output_size = self.units
+        #[tf.zeros_like(self.MaxFR), tf.zeros_like(self.MaxFR), tf.zeros_like(self.gsyn_max), tf.zeros_like(self.gsyn_max), tf.zeros_like(self.gsyn_max)]
+        # #self.ninp = tf.shape(self.gsyn_max)[0] - self.units
+
 
     def build(self, input_shape):
         super().build(input_shape)
@@ -58,15 +65,17 @@ class RateModel(layers.Layer):
         # h = K.dot(inputs, self.kernel)
         # output = h + K.dot(prev_output, self.recurrent_kernel)
 
-        FR = states[0] # [0,  : self.units]
-        Ad = states[1] #[0, self.units : ]
+        FR = states[0]
+        Ad = states[1]
 
         R = states[2]
         U = states[3]
-        X = states[3]
+        X = states[4]
 
+        #print(self.pconn, FR)
 
-        FRpre_normed = self.pconn * K.concat(FR, inputs)
+        FRpre_normed =  K.dot(FR, self.pconn)  #tf.concat(FR, inputs)
+
 
         y_ = R * K.exp(-self.dt / self.tau_d)
 
@@ -77,7 +86,7 @@ class RateModel(layers.Layer):
         R = y_ + U * x_ * FRpre_normed
         X = x_ - U * x_ * FRpre_normed
 
-        Isyn = self.gmax * X
+        Isyn = K.sum(self.gsyn_max * X, axis=1)
 
 
         FR_inf = (1 - self.r * FR) * self.I_F_cuve(Isyn - self.q * Ad)
@@ -95,16 +104,28 @@ with open("optim_res.json", "r") as outfile:
 for key, val in params.items():
     params[key] = np.zeros(Nunits, dtype=np.float32) + val
 
-input_shape = (1, 20, Nunits)
+psyn = ['gsyn_max', 'tau_f', 'tau_f', 'tau_r', 'Uinc','pconn']
+
+for key in psyn:
+    params[key] = np.ones([2, 2], dtype=np.float32) #+ val
+
+
+input_shape = (1, None, Nunits)
+
+initial_state = []
+for idx in range(5):
+    initial_state.append(np.zeros( (1, Nunits), dtype=np.float32) )
+
+rate_model = layers.RNN( RateModel(params, dt=0.1), return_sequences=True )
 
 model = keras.Sequential()
-model.add( layers.RNN( RateModel(params, dt=0.1), return_sequences=True ))
+model.add( rate_model )
 
 model.build( input_shape=input_shape)
 
 #initial_state = [tf.zeros((batch_size, units)), tf.zeros((batch_size, units))]
 #outputs, state = model(inputs, initial_state=initial_state)
-X = np.zeros(input_shape, dtype=np.float32)
+X = np.zeros((1, 2, Nunits), dtype=np.float32)
 print(X)
 Y = model.predict(X)
 
