@@ -37,7 +37,7 @@ class RateModel(layers.Layer):
 
         self.units = tf.size(self.MaxFR)
 
-        self.state_size = [tf.TensorShape([self.units]), tf.TensorShape([self.units]), tf.TensorShape([self.units, self.units]), tf.TensorShape([self.units, self.units]), tf.TensorShape([self.units, self.units])]
+        self.state_size = [tf.TensorShape([self.units, ]), tf.TensorShape([self.units, ]), tf.TensorShape([self.units, self.units]), tf.TensorShape([self.units, self.units]), tf.TensorShape([self.units, self.units])]
         self.output_size = self.units
         #[tf.zeros_like(self.MaxFR), tf.zeros_like(self.MaxFR), tf.zeros_like(self.gsyn_max), tf.zeros_like(self.gsyn_max), tf.zeros_like(self.gsyn_max)]
         # #self.ninp = tf.shape(self.gsyn_max)[0] - self.units
@@ -114,19 +114,24 @@ input_shape = (1, None, Nunits)
 
 initial_state = []
 for idx in range(5):
-    initial_state.append(np.zeros( (1, Nunits), dtype=np.float32) )
+    if idx < 2:
+        initial_state.append(np.zeros( (1, Nunits), dtype=np.float32) )
+    else:
+        initial_state.append(np.zeros((1, Nunits, Nunits), dtype=np.float32))
 
-rate_model = layers.RNN( RateModel(params, dt=0.1), return_sequences=True )
+    print(initial_state[-1].shape)
+
+rate_model = layers.RNN( RateModel(params, dt=0.1), return_sequences=True, stateful=True )
 
 model = keras.Sequential()
 model.add( rate_model )
 
 model.build( input_shape=input_shape)
 
-#initial_state = [tf.zeros((batch_size, units)), tf.zeros((batch_size, units))]
-#outputs, state = model(inputs, initial_state=initial_state)
 X = np.zeros((1, 2, Nunits), dtype=np.float32)
 print(X)
+
+model.layers[0].reset_states(states=initial_state)
 Y = model.predict(X)
 
 print(Y)
