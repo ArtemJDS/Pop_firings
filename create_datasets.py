@@ -12,14 +12,9 @@ import os
 import logging
 logging.basicConfig(filename='progress.log', level=logging.DEBUG)
 
-NN = 4000
-
-
-
 def randinterval(minv, maxv):
     v = float( (maxv - minv) * np.random.rand() + minv)
     return v
-
 
 def add_units(value, key):
     if key == "Cm":
@@ -41,87 +36,42 @@ def add_units(value, key):
     if key == "d":
         return value* uA
 
-    
-default_params = {
-    "Cm" : 114 *uF, # /cm**2,
-    "k" : 1.19 * mS / mV,
-    "Vrest" : -57.63 *mV,
-    "Vth" : np.random.normal(loc=-35.53, scale=4.0, size=NN)*mV,  # -35.53*mV,
-    "Vpeak" : 21.72 *mV,
-    "Vmin" : -48.7 *mV,
-    "a" : 0.005 * ms**-1,
-    "b" : 0.22 * mS,
-    "d" : 2 * uA,
-
-    "Eexc" : 0 *mV,
-    "Einh" : -75*mV,
-
-
-    "sigma" : 0.4 *mV,
-
-    "omega_1_e" : randinterval(0.2, 2.0) * Hz, # [0.2 2],
-    "omega_2_e" : randinterval(4.0, 12.0) * Hz, # [4  12],
-    "omega_3_e" : randinterval(25.0, 45.0) * Hz, # [25  45],
-    "omega_4_e" : randinterval(50.0, 90.0) * Hz, # [50  90],
-
-    "ampl_1_e" : randinterval(10.0, 20.0) * mS, # [0.2 10],
-    "ampl_2_e" : randinterval(10.0, 20.0) * mS, # [0.2 10],
-    "ampl_3_e" : randinterval(10.0, 20.0) * mS, # [0.2 10],
-    "ampl_4_e" : randinterval(10.0, 20.0) * mS, # [0.2 10],
-
-    "phase0_1_e": randinterval(-np.pi, np.pi),  # [-pi pi],
-    "phase0_2_e": randinterval(-np.pi, np.pi),  #  [-pi pi],
-    "phase0_3_e": randinterval(-np.pi, np.pi),  #  [-pi pi],
-    "phase0_4_e": randinterval(-np.pi, np.pi),  #  [-pi pi],
-
-
-    "omega_1_i" : randinterval(0.2, 2.0) * Hz, # [0.2 2],
-    "omega_2_i" : randinterval(4.0, 12.0) * Hz, # [4  12],
-    "omega_3_i" : randinterval(25.0, 45.0) * Hz, # [25  45],
-    "omega_4_i" : randinterval(50.0, 90.0) * Hz, # [50  90],
-
-
-    "ampl_1_i" : randinterval(5.0, 50.0) * mS, # [0.2 50],
-    "ampl_2_i" : randinterval(5.0, 50.0) * mS, # [0.2 50],
-    "ampl_3_i" : randinterval(5.0, 50.0) * mS, # [0.2 50],
-    "ampl_4_i" : randinterval(5.0, 50.0) * mS, # [0.2 50]
-
-    "phase0_1_i": randinterval(-np.pi, np.pi),  # [-pi pi],
-    "phase0_2_i": randinterval(-np.pi, np.pi),  # [-pi pi],
-    "phase0_3_i": randinterval(-np.pi, np.pi),  # [-pi pi],
-    "phase0_4_i": randinterval(-np.pi, np.pi),  # [-pi pi],
-
-}
-
-
-filepath = 'izhikevich_model_params.csv'
-syndata = pd.read_csv(filepath, index_col=0)
-syndata = syndata.fillna(-1)
-syndata = syndata.astype(float)
-syndata = syndata.rename(columns={'Vr':'Vrest', 'Vt':'Vth', 'C':'Cm'})
-
-print(syndata.head())
-
-
-all_params = {}
-for neuron_type in syndata.index:
-    
-    neuron = syndata.loc[neuron_type]
-    if not -1. in  list(neuron):
-        
-        neuron_opt_params = default_params.copy()
-
-        neuron = neuron.to_dict()
-
-        for key,item in neuron.items():
-            neuron_opt_params[key] = add_units(item, key)
-        all_params[neuron_type] = neuron_opt_params
-    
-    
-def randinterval(minv, maxv):
-    v = float( (maxv - minv) * np.random.rand() + minv)
-    return v
 def run_izhikevich_neurons(params, duration, N, filepath):
+
+    g_params = {
+        "omega_1_e": randinterval(0.2, 2.0) * Hz,  # [0.2 2],
+        "omega_2_e": randinterval(4.0, 12.0) * Hz,  # [4  12],
+        "omega_3_e": randinterval(25.0, 45.0) * Hz,  # [25  45],
+        "omega_4_e": randinterval(50.0, 90.0) * Hz,  # [50  90],
+
+        "ampl_1_e": randinterval(10.0, 20.0) * mS,  # [0.2 10],
+        "ampl_2_e": randinterval(10.0, 20.0) * mS,  # [0.2 10],
+        "ampl_3_e": randinterval(10.0, 20.0) * mS,  # [0.2 10],
+        "ampl_4_e": randinterval(10.0, 20.0) * mS,  # [0.2 10],
+
+        "phase0_1_e": randinterval(-np.pi, np.pi),  # [-pi pi],
+        "phase0_2_e": randinterval(-np.pi, np.pi),  # [-pi pi],
+        "phase0_3_e": randinterval(-np.pi, np.pi),  # [-pi pi],
+        "phase0_4_e": randinterval(-np.pi, np.pi),  # [-pi pi],
+
+        "omega_1_i": randinterval(0.2, 2.0) * Hz,  # [0.2 2],
+        "omega_2_i": randinterval(4.0, 12.0) * Hz,  # [4  12],
+        "omega_3_i": randinterval(25.0, 45.0) * Hz,  # [25  45],
+        "omega_4_i": randinterval(50.0, 90.0) * Hz,  # [50  90],
+
+        "ampl_1_i": randinterval(5.0, 50.0) * mS,  # [0.2 50],
+        "ampl_2_i": randinterval(5.0, 50.0) * mS,  # [0.2 50],
+        "ampl_3_i": randinterval(5.0, 50.0) * mS,  # [0.2 50],
+        "ampl_4_i": randinterval(5.0, 50.0) * mS,  # [0.2 50]
+
+        "phase0_1_i": randinterval(-np.pi, np.pi),  # [-pi pi],
+        "phase0_2_i": randinterval(-np.pi, np.pi),  # [-pi pi],
+        "phase0_3_i": randinterval(-np.pi, np.pi),  # [-pi pi],
+        "phase0_4_i": randinterval(-np.pi, np.pi),  # [-pi pi],
+    }
+
+    params = params | g_params
+
     eqs = '''
     dV/dt = (k*(V - Vrest)*(V - Vth) - U + Iexc + Iinh)/Cm + sigma*xi/ms**0.5 : volt
     dU/dt = a * (b * (V - Vrest) - U) : ampere
@@ -139,7 +89,7 @@ def run_izhikevich_neurons(params, duration, N, filepath):
     neuron.Vth = params['Vth']
 
 
-    M_full_V = StateMonitor(neuron, 'V', record=np.arange(N)[:10])
+    M_full_V = StateMonitor(neuron, 'V', record=np.arange(10))
     #M_full_U = StateMonitor(neuron, 'U', record=np.arange(N))
     gexc_monitor = StateMonitor(neuron, 'gexc', record=0)
     ginh_monitor = StateMonitor(neuron, 'ginh', record=0)
@@ -174,7 +124,7 @@ def run_izhikevich_neurons(params, duration, N, filepath):
 
 
 
-def create_single_type_dataset(params, path, Niter = 120, duration = 2000, NN = NN):
+def create_single_type_dataset(params, path, Niter = 120, duration = 2000, NN = 4000):
     
     for idx in range(Niter):
         
@@ -182,22 +132,63 @@ def create_single_type_dataset(params, path, Niter = 120, duration = 2000, NN = 
         run_izhikevich_neurons(params, duration, NN, filepath)
 
 
-def create_all_types_dataset(all_params):
+def create_all_types_dataset(all_params, NN):
     for n,( key, item) in enumerate(all_params.items()):
-        if key not in ['CA1 Oriens/Alveus']:
+        #if key not in ['CA1 Oriens/Alveus']:
+        if 'CA1' in key:
             params = item
 
 
             path = './{key}'.format(key = key)
-    #         import shutil
-    #         shutil.rmtree(path)
+
+            if os.path.isdir(path): continue
+
             os.mkdir('./{key}'.format(key = key))
             path = './{key}'.format(key = key)
 
 
-            create_single_type_dataset(params, path)
+            create_single_type_dataset(params, path, NN=NN)
             logging.info('Created {n} %'.format(n = n/len(all_params) * 100))
         
     
 if __name__ == '__main__':
-    create_all_types_dataset(all_params)
+    NN = 4000
+    default_params = {
+        "Cm": 114 * uF,  # /cm**2,
+        "k": 1.19 * mS / mV,
+        "Vrest": -57.63 * mV,
+        "Vth": np.random.normal(loc=-35.53, scale=4.0, size=NN) * mV,  # -35.53*mV,
+        "Vpeak": 21.72 * mV,
+        "Vmin": -48.7 * mV,
+        "a": 0.005 * ms ** -1,
+        "b": 0.22 * mS,
+        "d": 2 * uA,
+
+        "Eexc": 0 * mV,
+        "Einh": -75 * mV,
+
+        "sigma": 0.4 * mV,
+
+    }
+    filepath = 'izhikevich model params.csv'
+    syndata = pd.read_csv(filepath, index_col=0)
+    syndata = syndata.fillna(-1)
+    syndata = syndata.astype(float)
+    syndata = syndata.rename(columns={'Vr': 'Vrest', 'Vt': 'Vth', 'C': 'Cm'})
+
+    print(syndata.head())
+
+    all_params = {}
+    for neuron_type in syndata.index:
+
+        neuron = syndata.loc[neuron_type]
+        if not -1. in list(neuron):
+
+            neuron_opt_params = default_params.copy()
+
+            neuron = neuron.to_dict()
+
+            for key, item in neuron.items():
+                neuron_opt_params[key] = add_units(item, key)
+            all_params[neuron_type] = neuron_opt_params
+    create_all_types_dataset(all_params, NN)

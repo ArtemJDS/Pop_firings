@@ -90,6 +90,11 @@ else:
 
 rate_model_firings = pop.run_from_X(X, dt, target_firing_rate.shape[0], gexc, ginh)
 
+with h5py.File("test.hdf5", "w") as h5file:
+    h5file.create_dataset("rate_model_firings", data=rate_model_firings)
+    h5file.create_dataset("gexc", data=gexc)
+    h5file.create_dataset("ginh", data=ginh)
+
 t = np.linspace(0, duration, target_firing_rate.shape[0])
 for idx in range(target_firing_rate.shape[1]):
     fig, axes = plt.subplots(nrows=2)

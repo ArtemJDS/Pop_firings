@@ -11,17 +11,7 @@ logging.basicConfig(filename='progress_optim.log', level=logging.DEBUG)
 
 IS_OPTIM = True
 
-dt = 0.1
-duration = 2000
-
-current_path = os.getcwd()
-if not os.path.exists(current_path + 'optim_results'):
-    os.makedirs(current_path + 'optim_results')
-
-# path = "CA1 Axo-axonic"
-paths = [i for i in os.listdir() if '_' not in i and  '.' not in i]
-for ord_n, path in enumerate(paths):
-
+def run_optim_pop(ord_n, path, dt, duration):
     parordict = OrderedDict()
     parordict["MaxFR"] = 0.9
     parordict["Sfr"] = 625
@@ -77,7 +67,7 @@ for ord_n, path in enumerate(paths):
 
     if IS_OPTIM:
         res = differential_evolution(pop.loss, x0=X, bounds=bounds, args=(dt, target_firing_rate, gexc, ginh), \
-                                        atol=1e-3, recombination=0.7, mutation=(0.7, 1.1), updating='deferred', strategy='best2bin', \
+                                        atol=1e-3, recombination=0.7, mutation=0.3, updating='deferred', strategy='best2bin', \
                                         disp=True, workers=-1, maxiter=700)
         print(res.message)
         print(res.x)
@@ -117,23 +107,28 @@ for ord_n, path in enumerate(paths):
 
         axes[1].legend(loc="upper right")
         
-        plt.savefig('optim_results/' + path)
+        plt.savefig('optim_results/' + str(idx) + path)
 #         plt.show(block=True)
 
-        if idx > 20:
+        if idx > 10:
             break
-    plt.close()
+    plt.close('all')
 #     logging.info('Created {n} %. {path}'.format(n = ord_n/len(paths) * 100, path = path))
 
 
-    # optimal_params = parordict
-    # file = open("res.txt", "w")
-    # for key, val in optimal_params.items():
-    #     file.write("{} : {}\n".format(key, val))
-    # file.close()
 
-    # gexc = 1 + np.cos(2*np.pi*0.008*np.linspace(0, duration, int(duration/dt)+1))
-    # ginh = 1 + np.cos(2*np.pi*0.008*np.linspace(0, duration, int(duration/dt)+1) + np.pi )
-    # fr = pop.run_model(dt, duration, gexc, ginh)
-    # plt.plot(target_firing_rate[:, 55])
-    # plt.show()
+def main():
+    dt = 0.1
+    duration = 2000
+
+    current_path = os.getcwd()
+    if not os.path.exists(current_path + '/optim_results'):
+        os.makedirs(current_path + '/optim_results')
+
+    paths = [i for i in os.listdir() if '_' not in i and '.' not in i]
+    for ord_n, path in enumerate(paths):
+        run_optim_pop(ord_n, path, dt, duration)
+
+
+if __name__ == "__main__":
+    main()
