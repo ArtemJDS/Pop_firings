@@ -92,10 +92,10 @@ for idx in range(Niter):
         "omega_3_e" : randinterval(25.0, 45.0) * Hz, # [25  45],
         "omega_4_e" : randinterval(50.0, 90.0) * Hz, # [50  90],
 
-        "ampl_1_e" : randinterval(10.0, 20.0) * mS, # [0.2 10],
-        "ampl_2_e" : randinterval(10.0, 20.0) * mS, # [0.2 10],
-        "ampl_3_e" : randinterval(10.0, 20.0) * mS, # [0.2 10],
-        "ampl_4_e" : randinterval(10.0, 20.0) * mS, # [0.2 10],
+        "ampl_1_e" : randinterval(20.0, 40.0) * mS, # [0.2 10],
+        "ampl_2_e" : randinterval(20.0, 40.0) * mS, # [0.2 10],
+        "ampl_3_e" : randinterval(20.0, 40.0) * mS, # [0.2 10],
+        "ampl_4_e" : randinterval(20.0, 40.0) * mS, # [0.2 10],
 
         "phase0_1_e": randinterval(-np.pi, np.pi),  # [-pi pi],
         "phase0_2_e": randinterval(-np.pi, np.pi),  #  [-pi pi],

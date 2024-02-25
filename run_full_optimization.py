@@ -46,11 +46,11 @@ def run_optim_pop(ord_n, path, dt, duration):
     ginh = []
 
     for idx in range(Niter):
-        filepath = "{path}/{i}.hdf5".format(path=path, i=idx)
+        filepath = "./datasets/{path}/{i}.hdf5".format(path=path, i=idx)
         with h5py.File(filepath, mode='r') as h5file:
             gexc.append( h5file["gexc"][:].ravel() )
             ginh.append( h5file["ginh"][:].ravel() )
-            target_firing_rate.append(h5file["firing_rate"][:].ravel())
+            target_firing_rate.append( h5file["firing_rate"][:].ravel() )
 
  
     target_firing_rate = np.stack(target_firing_rate, axis=1)
@@ -66,11 +66,15 @@ def run_optim_pop(ord_n, path, dt, duration):
     pop = lib.RateModel(Niter, parameters)
 
     if IS_OPTIM:
+        print(path)
         res = differential_evolution(pop.loss, x0=X, bounds=bounds, args=(dt, target_firing_rate, gexc, ginh), \
                                         atol=1e-3, recombination=0.7, mutation=0.3, updating='deferred', strategy='best2bin', \
                                         disp=True, workers=-1, maxiter=700)
         print(res.message)
-        print(res.x)
+        #print(res.x)
+
+        #print(res.fun)
+        np.save(f"optim_results/{path}_loss.npy", res.fun)
 
 
 
@@ -92,9 +96,14 @@ def run_optim_pop(ord_n, path, dt, duration):
 
     rate_model_firings = pop.run_from_X(X, dt, target_firing_rate.shape[0], gexc, ginh)
 
+    figpath = './optim_results/' + path
+    if not os.path.isdir(figpath):
+        os.mkdir(figpath)
+
+
     t = np.linspace(0, duration, target_firing_rate.shape[0])
     for idx in range(target_firing_rate.shape[1]):
-        fig, axes = plt.subplots(nrows=2)
+        fig, axes = plt.subplots(nrows=2, figsize=(10, 10))
 
         axes[0].set_title(idx)
         axes[0].plot(t, rate_model_firings[:, idx], label="Rate model", color="green")
@@ -107,12 +116,12 @@ def run_optim_pop(ord_n, path, dt, duration):
 
         axes[1].legend(loc="upper right")
         
-        plt.savefig('optim_results/' + str(idx) + path)
+        plt.savefig(figpath + "/" + str(idx) + ".png")
 #         plt.show(block=True)
 
         if idx > 10:
             break
-    plt.close('all')
+        plt.close('all')
 #     logging.info('Created {n} %. {path}'.format(n = ord_n/len(paths) * 100, path = path))
 
 
@@ -125,7 +134,7 @@ def main():
     if not os.path.exists(current_path + '/optim_results'):
         os.makedirs(current_path + '/optim_results')
 
-    paths = [i for i in os.listdir() if '_' not in i and '.' not in i]
+    paths = [i for i in os.listdir('./datasets/') if '_' not in i and '.' not in i]
     for ord_n, path in enumerate(paths):
         run_optim_pop(ord_n, path, dt, duration)
 

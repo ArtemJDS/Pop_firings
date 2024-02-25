@@ -44,10 +44,10 @@ def run_izhikevich_neurons(params, duration, N, filepath):
         "omega_3_e": randinterval(25.0, 45.0) * Hz,  # [25  45],
         "omega_4_e": randinterval(50.0, 90.0) * Hz,  # [50  90],
 
-        "ampl_1_e": randinterval(10.0, 20.0) * mS,  # [0.2 10],
-        "ampl_2_e": randinterval(10.0, 20.0) * mS,  # [0.2 10],
-        "ampl_3_e": randinterval(10.0, 20.0) * mS,  # [0.2 10],
-        "ampl_4_e": randinterval(10.0, 20.0) * mS,  # [0.2 10],
+        "ampl_1_e": randinterval(20.0, 40.0) * mS,  # [0.2 10],
+        "ampl_2_e": randinterval(20.0, 40.0) * mS,  # [0.2 10],
+        "ampl_3_e": randinterval(20.0, 40.0) * mS,  # [0.2 10],
+        "ampl_4_e": randinterval(20.0, 40.0) * mS,  # [0.2 10],
 
         "phase0_1_e": randinterval(-np.pi, np.pi),  # [-pi pi],
         "phase0_2_e": randinterval(-np.pi, np.pi),  # [-pi pi],
@@ -139,12 +139,11 @@ def create_all_types_dataset(all_params, NN):
             params = item
 
 
-            path = './{key}'.format(key = key)
+            path = './datasets/{key}'.format(key = key)
 
-            if os.path.isdir(path): continue
+            if not os.path.isdir(path):
+                os.mkdir(path)
 
-            os.mkdir('./{key}'.format(key = key))
-            path = './{key}'.format(key = key)
 
 
             create_single_type_dataset(params, path, NN=NN)

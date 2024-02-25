@@ -7,13 +7,12 @@ import json
 import lib
 
 
-IS_OPTIM = False
-
+IS_OPTIM = True
 dt = 0.1
 duration = 2000
 
 parordict = OrderedDict()
-parordict["MaxFR"] = 0.9
+parordict["MaxFR"] = 0.2
 parordict["Sfr"] = 625
 parordict["th"] = 0.5
 parordict["r"] = 0.1
@@ -26,9 +25,9 @@ parordict["winh"] = 5
 parameters = [parordict,]
 
 bounds = [
-    [0.2, 1.0], # "MaxFR"
-    [100, 10000], # "Sfr"
-    [-100, 100], # "th"
+    [0.01, 1.0], # "MaxFR"
+    [100, 100000], # "Sfr"
+    [-1000, 1000], # "th"
     [0.0001, 1.0], # "r"
     [0.0001, 1.0], # "q"
     [0.0001, 1.0], # "s"
@@ -37,7 +36,8 @@ bounds = [
     [0.1, 100.0], # "winh"
 ]
 Niter = 100
-path = "./pv_firing_rate"
+path = "./pv_firing_rate/" # "./datasets/CA1 Basket/"
+
 
 target_firing_rate = []
 gexc = []
@@ -65,7 +65,7 @@ pop = lib.RateModel(Niter, parameters)
 
 if IS_OPTIM:
     res = differential_evolution(pop.loss, x0=X, bounds=bounds, args=(dt, target_firing_rate, gexc, ginh), \
-                                    atol=1e-3, recombination=0.7, mutation=0.9, updating='deferred', strategy='best2bin', \
+                                    atol=1e-3, recombination=0.7, mutation=0.3, updating='deferred', strategy='best2bin', \
                                     disp=True, workers=-1, maxiter=1000)
     print(res.message)
     print(res.x)

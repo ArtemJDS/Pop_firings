@@ -33,7 +33,7 @@ class RateModel:
 
     def I_F_cuve(self, x):
         shx_2 = (x - self.th)**2
-        y = np.where(x > self.th, self.MaxFR * shx_2 / (self.Sfr + shx_2), 0)
+        y = np.where(x > 0, self.MaxFR * shx_2 / (self.Sfr + shx_2), 0)
         return y
 
     def run_model(self, dt, Nsteps, gexc, ginh):
@@ -46,7 +46,7 @@ class RateModel:
         exp_tau_A = np.exp(-dt / self.tau_A)
 
         for i in range(Nsteps - 1):
-            FR_inf = (1 - self.r * FR[i, :]) * self.I_F_cuve(gexc[i, :] - self.winh * ginh[i, :] - self.q * Ad[i, :])
+            FR_inf = (1 - self.r * FR[i, :]) * self.I_F_cuve(gexc[i, :] - self.winh * ginh[i, :] - self.q * Ad[i, :] + self.th)
             A_inf = self.s * FR[i, :]
 
 
