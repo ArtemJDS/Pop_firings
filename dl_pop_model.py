@@ -2,8 +2,12 @@ import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import LSTM
+from  tf.keras.saving import load_model
 import h5py
 import matplotlib.pyplot as plt
+
+USE_SAVED_MODEL = True
+
 def get_dataset():
     Niter = 100
     path = "./pv_firing_rate/" # "./datasets/CA1 Basket/"
@@ -19,12 +23,12 @@ def get_dataset():
             # gexc.append( h5file["gexc"][:].ravel() )
             # ginh.append( h5file["ginh"][:].ravel() )
 
-            X[idx, :, 0] = h5file["gexc"][:].ravel() / 40.0
+            X[idx, :, 0] = h5file["gexc"][:].ravel() / 80.0
             X[idx, :, 1] = h5file["ginh"][:].ravel() / 50.0
 
             #target_firing_rate.append(h5file["firing_rate"][:].ravel())
 
-            Y[idx, :, 0] = h5file["firing_rate"][:-1].ravel() #* 10
+            Y[idx, :, 0] = h5file["firing_rate"][:-1].ravel() * 100.0
 
 
     return X, Y
@@ -32,15 +36,20 @@ def get_dataset():
 
 X, Y = get_dataset()
 
+if USE_SAVED_MODEL:
+    model = load_model("pv_bas.keras")
+else:
 
+    # create and fit the LSTM network
+    model = Sequential()
+    model.add(LSTM(10, input_shape=(None, 2), return_sequences=True ))
+    model.add(Dense(1, activation='relu'))
+    model.compile(loss='mean_squared_logarithmic_error', optimizer='adam')
 
-# create and fit the LSTM network
-model = Sequential()
-model.add(LSTM(4, input_shape=(None, 2), return_sequences=True ))
-model.add(Dense(1, activation='linear'))
-model.compile(loss='mean_squared_logarithmic_error', optimizer='adam')
-model.fit(X, Y, epochs=50, batch_size=100, verbose=2)
-model.save("pv_bas.keras")
+for idx in range(50):
+    model.fit(X, Y, epochs=20, batch_size=100, verbose=2)
+    model.save("pv_bas.keras")
+    print(idx+1, " epochs fitted!")
 
 
 Y_pred = model.predict(X)
